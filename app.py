@@ -1,9 +1,11 @@
-
 import os
 from datetime import datetime
 
 import streamlit as st
 from groq import Groq
+from pypdf import PdfReader
+from docx import Document
+from io import BytesIO
 
 st.set_page_config(
     page_title="AI Learning Roadmap Generator",
@@ -13,67 +15,82 @@ st.set_page_config(
 
 st.title("🧭 AI Learning Roadmap Generator")
 st.write(
-    "Create a practical, step-by-step learning plan based on your subject, "
-    "current skill level, and available time."
+    "Generate a personalized, step-by-step learning roadmap based on your "
+    "chosen field, current skill level, available time, and optionally your CV."
 )
 
-# Read the API key from Streamlit Secrets (deployment) or environment variables (local).
+MAX_CV_SIZE_MB = 10
+
+
 def get_api_key():
+    """Read the Groq API key from Streamlit Secrets or an environment variable."""
     try:
-        return st.secrets["GROQ_API_KEY"]
+        key = st.secrets.get("GROQ_API_KEY", "")
+        if key:
+            return key
     except Exception:
-        return os.getenv("GROQ_API_KEY")
+        pass
+    return os.getenv("GROQ_API_KEY", "")
 
 
-def generate_roadmap(field, level, duration, hours_per_week, goal):
+def extract_cv_text(uploaded_file):
+    """Extract readable text from a PDF, DOCX, or TXT CV."""
+    if uploaded_file is None:
+        return ""
+
+    file_bytes = uploaded_file.getvalue()
+    extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
+
+    if extension == "pdf":
+        reader = PdfReader(BytesIO(file_bytes))
+        pages = []
+        for page in reader.pages:
+            pages.append(page.extract_text() or "")
+        return "\n".join(pages).strip()
+
+    if extension == "docx":
+        document = Document(BytesIO(file_bytes))
+        parts = [paragraph.text for paragraph in document.paragraphs]
+
+        # Also extract text from tables, which are common in CV templates.
+        for table in document.tables:
+            for row in table.rows:
+                parts.append(" | ".join(cell.text for cell in row.cells))
+
+        return "\n".join(part for part in parts if part.strip()).strip()
+
+    if extension == "txt":
+        return file_bytes.decode("utf-8", errors="replace").strip()
+
+    raise ValueError("Unsupported CV format. Please upload PDF, DOCX, or TXT.")
+
+
+def generate_roadmap(field, level, duration, hours_per_week, goal, cv_text=""):
     api_key = get_api_key()
     if not api_key:
         raise ValueError(
-            "Groq API key not found. Add GROQ_API_KEY to your .env/environment "
-            "or Streamlit Secrets."
+            "Groq API key not found. Configure GROQ_API_KEY in your "
+            "environment variables or Streamlit Secrets."
         )
 
     client = Groq(api_key=api_key)
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     system_prompt = """
-You are an experienced learning-path designer and supportive teacher.
-Create realistic, well-organized learning roadmaps for the user's stated subject.
-Adapt the depth and terminology to the learner's current skill level and time.
-Do not pretend the learner can master a large field in an unrealistically short time.
-If the timeline is too short, explain what can reasonably be achieved.
-Use clear Markdown headings, tables where useful, and beginner-friendly language.
-Include practical exercises and projects, not only theory.
-Recommend reputable, freely accessible learning resources by name and official URL
-when you know them confidently. Never invent URLs. If unsure, give resource names
-without a URL.
-"""
+You are an experienced learning-path designer, career-learning advisor,
+and supportive teacher.
 
-    user_prompt = f"""
-Create a personalized learning roadmap with these details:
+Create realistic, structured learning roadmaps for the user's chosen field.
+Adapt the depth to the learner's skill level, available duration, and weekly
+study hours.
 
-Field / domain: {field}
-Current skill level: {level}
-Available learning duration: {duration}
-Study time: {hours_per_week} hours per week
-Main goal: {goal or "Build strong practical knowledge"}
+If a CV is provided:
+- Use only relevant education, experience, projects, and skills.
+- Identify existing strengths and knowledge gaps.
+- Do not assume a skill is mastered merely because it appears in the CV.
+- Do not repeat foundational topics unnecessarily; include a short review
+  when the evidence of mastery is unclear.
+- Ignore personal contact details and other information that is not needed
+  to build the learning plan.
 
-Structure the response in this order:
-
-1. Roadmap overview and realistic expected outcome
-2. Prerequisites
-3. Learning phases in chronological order
-   - Duration
-   - Topics
-   - Simple explanations
-   - Practice tasks
-   - Completion checkpoints
-4. Weekly study schedule
-5. Practical projects
-6. Recommended tools and software
-7. Learning resources
-8. Progress assessment and next steps
-
-Make the timeline fit the user's available duration.
-Clearly label optional topics.
-Avoid vague advice. Name the actual topics.
-"""
+Do not promise guaranteed employment or mastery.
