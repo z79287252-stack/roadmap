@@ -64,6 +64,17 @@ def extract_cv_text(uploaded_file):
 
     raise ValueError("Unsupported CV format. Please upload PDF, DOCX, or TXT.")
 
+st.subheader("📄 Upload Your CV (Optional)")
+
+uploaded_cv = st.file_uploader(
+    "Choose your CV",
+    type=["pdf", "docx", "txt"],
+    help="Upload your CV to generate a personalized learning roadmap."
+)
+
+if uploaded_cv:
+    st.success(f"File uploaded successfully: {uploaded_cv.name}")
+
 
 def generate_roadmap(field, level, duration, hours_per_week, goal, cv_text=""):
     api_key = get_api_key()
