@@ -55,11 +55,25 @@ Field / domain: {field}
 Current skill level: {level}
 Available learning duration: {duration}
 Study time: {hours_per_week} hours per week
-Main goal (optional): {goal or "Build strong practical knowledge"}
+Main goal: {goal or "Build strong practical knowledge"}
 
 Structure the response in this order:
+
 1. Roadmap overview and realistic expected outcome
-2. Prerequisites (if any)
+2. Prerequisites
 3. Learning phases in chronological order
-   - For each phase: duration, topics, simple explanations, practice tasks,
-     and a measurable completion checkpoint
+   - Duration
+   - Topics
+   - Simple explanations
+   - Practice tasks
+   - Completion checkpoints
+4. Weekly study schedule
+5. Practical projects
+6. Recommended tools and software
+7. Learning resources
+8. Progress assessment and next steps
+
+Make the timeline fit the user's available duration.
+Clearly label optional topics.
+Avoid vague advice. Name the actual topics.
+"""
