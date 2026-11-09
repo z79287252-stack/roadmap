@@ -32,49 +32,26 @@ def get_api_key():
         pass
     return os.getenv("GROQ_API_KEY", "")
 
+if st.button("🚀 Generate Roadmap", type="primary"):
+    with st.spinner("Generating your learning roadmap..."):
+        roadmap = generate_roadmap(
+            field,
+            skill_level,
+            duration,
+            weekly_hours,
+            goal,
+            cv_text
+        )
 
-def extract_cv_text(uploaded_file):
-    """Extract readable text from a PDF, DOCX, or TXT CV."""
-    if uploaded_file is None:
-        return ""
+    st.markdown("## Your Learning Roadmap")
+    st.markdown(roadmap)
 
-    file_bytes = uploaded_file.getvalue()
-    extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
-
-    if extension == "pdf":
-        reader = PdfReader(BytesIO(file_bytes))
-        pages = []
-        for page in reader.pages:
-            pages.append(page.extract_text() or "")
-        return "\n".join(pages).strip()
-
-    if extension == "docx":
-        document = Document(BytesIO(file_bytes))
-        parts = [paragraph.text for paragraph in document.paragraphs]
-
-        # Also extract text from tables, which are common in CV templates.
-        for table in document.tables:
-            for row in table.rows:
-                parts.append(" | ".join(cell.text for cell in row.cells))
-
-        return "\n".join(part for part in parts if part.strip()).strip()
-
-    if extension == "txt":
-        return file_bytes.decode("utf-8", errors="replace").strip()
-
-    raise ValueError("Unsupported CV format. Please upload PDF, DOCX, or TXT.")
-
-st.subheader("📄 Upload Your CV (Optional)")
-
-uploaded_cv = st.file_uploader(
-    "Choose your CV",
-    type=["pdf", "docx", "txt"],
-    help="Upload your CV to generate a personalized learning roadmap."
-)
-
-if uploaded_cv:
-    st.success(f"File uploaded successfully: {uploaded_cv.name}")
-
+    st.download_button(
+        label="📥 Download Roadmap",
+        data=roadmap,
+        file_name="learning_roadmap.md",
+        mime="text/markdown"
+    )
 
 def generate_roadmap(field, level, duration, hours_per_week, goal, cv_text=""):
     api_key = get_api_key()
