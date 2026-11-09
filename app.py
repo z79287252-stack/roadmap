@@ -76,7 +76,7 @@ def generate_roadmap(field, level, duration, hours_per_week, goal, cv_text=""):
     client = Groq(api_key=api_key)
     model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-   system_prompt = """
+    system_prompt = """
 You are an experienced learning-path designer, career-learning advisor,
 and supportive teacher.
 
